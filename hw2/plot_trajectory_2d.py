@@ -3,7 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-def plot_levels(func, xrange=None, yrange=None, levels=None):
+def plot_levels(func, ax, xrange=None, yrange=None, levels=None):
     """
     Plotting the contour lines of the function.
 
@@ -17,8 +17,8 @@ def plot_levels(func, xrange=None, yrange=None, levels=None):
     if yrange is None:
         yrange = [-5, 5]
     if levels is None:
-        levels = [0, 0.25, 1, 4, 9, 16, 25]
-        
+        levels = [0, 0.25, 1, 4, 9, 16, 25, 50, 100, 200, 300]
+
     x = np.linspace(xrange[0], xrange[1], 100)
     y = np.linspace(yrange[0], yrange[1], 100)
     X, Y = np.meshgrid(x, y)
@@ -27,12 +27,11 @@ def plot_levels(func, xrange=None, yrange=None, levels=None):
         for j in range(Z.shape[1]):
             Z[i, j] = func(np.array([X[i, j], Y[i, j]]))
 
-    CS = plt.contour(X, Y, Z, levels=levels, colors='k', linewidth=4.0)
-    plt.clabel(CS, inline=1, fontsize=8) 
-    plt.grid()              
+    CS = ax.contour(X, Y, Z, levels=levels, colors='k')
+    ax.clabel(CS, inline=1, fontsize=8)
+    ax.grid()
 
-        
-def plot_trajectory(func, history, fit_axis=False, label=None):
+def plot_trajectory(func, ax, history, fit_axis=False, label=None):
     """
     Plotting the trajectory of a method. 
     Use after plot_levels(...).
@@ -45,8 +44,10 @@ def plot_trajectory(func, history, fit_axis=False, label=None):
     >> plot_trajectory(oracle.func, history['x'])
     """
     x_values, y_values = zip(*history)
-    plt.plot(x_values, y_values, '-v', linewidth=5.0, ms=12.0, 
-             alpha=1.0, c='r', label=label)
+    ax.plot(x_values, y_values, '-v', linewidth=3.0, ms=7.0,
+             alpha=1.0, c='r', label='trajectory')
+    ax.plot(x_values[-1], y_values[-1], 'o', ms=12.0,
+            alpha=1.0, c='b', label='final point')
     
     # Tries to adapt axis-ranges for the trajectory:
     if fit_axis:
@@ -54,6 +55,5 @@ def plot_trajectory(func, history, fit_axis=False, label=None):
         COEF = 1.5
         xrange = [-xmax * COEF, xmax * COEF]
         yrange = [-ymax * COEF, ymax * COEF]
-        plt.xlim(xrange)
-        plt.ylim(yrange)
-
+        ax.xlim(xrange)
+        ax.ylim(yrange)

@@ -4,7 +4,6 @@ import scipy
 import time
 from datetime import datetime
 from collections import defaultdict
-from scipy.optimize import line_search
 
 
 class LineSearchTool(object):
@@ -79,7 +78,7 @@ class LineSearchTool(object):
         alpha : float or None if failure
             Chosen step size
         """
-                
+        
         if previous_alpha is not None:
             self.alpha_0 = previous_alpha
   
@@ -87,7 +86,7 @@ class LineSearchTool(object):
         derphi = lambda alpha: oracle.grad(x_k + alpha * d_k).dot(d_k)
         
         if self._method == 'Wolfe':
-            alpha, _, _, _, _, _ = line_search(oracle.func, oracle.grad, x_k, d_k)
+            alpha = scipy.optimize.linesearch.scalar_search_wolfe2(phi, derphi, c1=self.c1, c2=self.c2)[0]
             if alpha is None:
                 alpha = self.alpha_0
                 while phi(alpha) > phi(0) + self.c1 * alpha * derphi(0):
