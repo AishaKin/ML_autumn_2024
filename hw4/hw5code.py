@@ -4,35 +4,55 @@ from sklearn.base import BaseEstimator
 
 
 def find_best_split(feature_vector, target_vector):
-    def count_H(R):
-        p0 = np.sum(R * (target_vector == 0), axis=1) / np.sum(R, axis=1)
-        p1 = np.sum(R * (target_vector == 1), axis=1) / np.sum(R, axis=1)
-        return 1 - p0 ** 2 - p1 ** 2
+    """
+    :param feature_vector: вещественнозначный вектор значений признака
+    :param target_vector: вектор классов объектов, len(feature_vector) == len(target_vector)
 
-    def count_gini(thresholds_local):
-        Rl = sort_feature_vector.reshape(1, -1) < thresholds_local.reshape(-1, 1)
-        Rr = sort_feature_vector.reshape(1, -1) > thresholds_local.reshape(-1, 1)
+    :return thresholds: отсортированный по возрастанию вектор со всеми возможными порогами
+    :return ginis: вектор со значениями критерия Джини для каждого из порогов в thresholds
+    :return threshold_best: оптимальный порог (число)
+    :return gini_best: оптимальное значение критерия Джини (число)
+    """
+    
+    def calculate_impurity(y):
+        if len(y) == 0:
+            return 0
+        p0 = np.mean(y == 0)
+        p1 = 1 - p0
+        return 1 - p1 ** 2 - p0 ** 2
+    
+    sorted_ind = np.argsort(feature_vector)
+    R = feature_vector[sorted_ind]
+    y = target_vector[sorted_ind]
+    
+    thresholds = (R[1:] + R[:-1]) / 2
+    ginis = np.zeros(len(thresholds))  # Инициализация массива с нулями
+    gini_best = -np.inf  # Начальное значение, чтобы гарантировать обновление
+    threshold_best = None
 
-        R = target_vector
-        answer = -np.sum(Rl, axis=1) / np.sum(R) * count_H(Rl) - np.sum(Rr, axis=1) / np.sum(R) * count_H(Rr)
-        return answer
+    # Основной цикл по всем порогам
+    for i, t in enumerate(thresholds):   
+        R_l = R[R < t]
+        R_r = R[R >= t]
 
-    index_sort = np.argsort(feature_vector)
-    sort_feature_vector, target_vector = feature_vector[index_sort], target_vector[index_sort]
+        if len(R_l) == 0 or len(R_r) == 0:  # Пропуск пустых подвыборок
+            continue
+        
+        y_l = y[R < t]
+        y_r = y[R >= t]
+        
+        H_R = calculate_impurity(y)
+        H_Rl = calculate_impurity(y_l)
+        H_Rr = calculate_impurity(y_r)
 
-    thresholds = (np.roll(np.unique(sort_feature_vector), 1) + np.unique(sort_feature_vector))[1:] / 2
+        Q = H_R - (len(R_l) / len(R)) * H_Rl - (len(R_r) / len(R)) * H_Rr
+        ginis[i] = Q  # Запись значения Джини в массив
 
-    if len(thresholds) == 0:
-        return [], [], -np.inf, -np.inf
-
-    gini = count_gini(thresholds)
-
-    best_index = np.argmax(gini)
-
-    threshold_best = thresholds[best_index]
-    gini_best = gini[best_index]
-
-    return thresholds, gini, threshold_best, gini_best
+        if Q > gini_best:
+            gini_best = Q
+            threshold_best = t
+            
+    return thresholds[ginis > 0], ginis[ginis > 0], threshold_best, gini_best
 
 
 class DecisionTree(BaseEstimator):
@@ -128,10 +148,12 @@ class DecisionTree(BaseEstimator):
                     return self._predict_node(x, node["right_child"])
             else:
                 raise ValueError
+
             if x[feature_split] < threshold:
                 return self._predict_node(x, node["left_child"])
             else:
                 return self._predict_node(x, node["right_child"])
+
 
     def fit(self, X, y):
         self._fit_node(X, y, self._tree)
